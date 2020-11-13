@@ -16,6 +16,9 @@ inputs:
   commit:
     description: 'Commit SHA to run setCommits (when --auto does not work)'
     required: false
+  repo:
+    description: 'Repository name like edvinasbartkus/sentry-release-action (when --auto does not work)'
+    required: false
 
 runs:
   using: 'node12'
