@@ -1,312 +1,95 @@
 module.exports =
-/******/ (function(modules, runtime) { // webpackBootstrap
-/******/ 	"use strict";
-/******/ 	// The module cache
-/******/ 	var installedModules = {};
-/******/
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/
-/******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId]) {
-/******/ 			return installedModules[moduleId].exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = installedModules[moduleId] = {
-/******/ 			i: moduleId,
-/******/ 			l: false,
-/******/ 			exports: {}
-/******/ 		};
-/******/
-/******/ 		// Execute the module function
-/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-/******/
-/******/ 		// Flag the module as loaded
-/******/ 		module.l = true;
-/******/
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/
-/******/
-/******/ 	__webpack_require__.ab = __dirname + "/";
-/******/
-/******/ 	// the startup function
-/******/ 	function startup() {
-/******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(703);
-/******/ 	};
-/******/
-/******/ 	// run startup
-/******/ 	return startup();
-/******/ })
-/************************************************************************/
-/******/ ({
+/******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
 
-/***/ 87:
-/***/ (function(module) {
-
-module.exports = require("os");
-
-/***/ }),
-
-/***/ 116:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ 352:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
 
-
-const os = __webpack_require__(87);
-const path = __webpack_require__(622);
-const childProcess = __webpack_require__(129);
-
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const os = __importStar(__webpack_require__(87));
+const utils_1 = __webpack_require__(605);
 /**
- * Absolute path to the sentry-cli binary (platform dependent).
- * @type {string}
- */
-// istanbul ignore next
-let binaryPath = __webpack_require__.ab + "sentry-cli";
-/**
- * Overrides the default binary path with a mock value, useful for testing.
+ * Commands
  *
- * @param {string} mockPath The new path to the mock sentry-cli binary
+ * Command Format:
+ *   ::name key=value,key=value::message
+ *
+ * Examples:
+ *   ::warning::This is the message
+ *   ::set-env name=MY_VAR::some value
  */
-function mockBinaryPath(mockPath) {
-  binaryPath = mockPath;
+function issueCommand(command, properties, message) {
+    const cmd = new Command(command, properties, message);
+    process.stdout.write(cmd.toString() + os.EOL);
 }
-
-/**
- * The javascript type of a command line option.
- * @typedef {'array'|'string'|'boolean'|'inverted-boolean'} OptionType
- */
-
-/**
- * Schema definition of a command line option.
- * @typedef {object} OptionSchema
- * @prop {string} param The flag of the command line option including dashes.
- * @prop {OptionType} type The value type of the command line option.
- */
-
-/**
- * Schema definition for a command.
- * @typedef {Object.<string, OptionSchema>} OptionsSchema
- */
-
-/**
- * Serializes command line options into an arguments array.
- *
- * @param {OptionsSchema} schema An options schema required by the command.
- * @param {object} options An options object according to the schema.
- * @returns {string[]} An arguments array that can be passed via command line.
- */
-function serializeOptions(schema, options) {
-  return Object.keys(schema).reduce((newOptions, option) => {
-    const paramValue = options[option];
-    if (paramValue === undefined) {
-      return newOptions;
-    }
-
-    const paramType = schema[option].type;
-    const paramName = schema[option].param;
-
-    if (paramType === 'array') {
-      if (!Array.isArray(paramValue)) {
-        throw new Error(`${option} should be an array`);
-      }
-
-      return newOptions.concat(
-        paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
-      );
-    }
-
-    if (paramType === 'boolean') {
-      if (typeof paramValue !== 'boolean') {
-        throw new Error(`${option} should be a bool`);
-      }
-
-      const invertedParamName = schema[option].invertedParam;
-
-      if (paramValue && paramName !== undefined) {
-        return newOptions.concat([paramName]);
-      }
-
-      if (!paramValue && invertedParamName !== undefined) {
-        return newOptions.concat([invertedParamName]);
-      }
-
-      return newOptions;
-    }
-
-    return newOptions.concat(paramName, paramValue);
-  }, []);
+exports.issueCommand = issueCommand;
+function issue(name, message = '') {
+    issueCommand(name, {}, message);
 }
-
-/**
- * Serializes the command and its options into an arguments array.
- *
- * @param {string} command The literal name of the command.
- * @param {OptionsSchema} [schema] An options schema required by the command.
- * @param {object} [options] An options object according to the schema.
- * @returns {string[]} An arguments array that can be passed via command line.
- */
-function prepareCommand(command, schema, options) {
-  return command.concat(serializeOptions(schema || {}, options || {}));
-}
-
-/**
- * Returns the absolute path to the `sentry-cli` binary.
- * @returns {string}
- */
-function getPath() {
-  return __webpack_require__.ab + "sentry-cli";
-}
-
-/**
- * Runs `sentry-cli` with the given command line arguments.
- *
- * Use {@link prepareCommand} to specify the command and add arguments for command-
- * specific options. For top-level options, use {@link serializeOptions} directly.
- *
- * The returned promise resolves with the standard output of the command invocation
- * including all newlines. In order to parse this output, be sure to trim the output
- * first.
- *
- * If the command failed to execute, the Promise rejects with the error returned by the
- * CLI. This error includes a `code` property with the process exit status.
- *
- * @example
- * const output = await execute(['--version']);
- * expect(output.trim()).toBe('sentry-cli x.y.z');
- *
- * @param {string[]} args Command line arguments passed to `sentry-cli`.
- * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
- * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
- * @param {string} [configFile] Relative or absolute path to the configuration file.
- * @returns {Promise.<string>} A promise that resolves to the standard output.
- */
-function execute(args, live, silent, configFile) {
-  const env = { ...process.env };
-  if (configFile) {
-    env.SENTRY_PROPERTIES = configFile;
-  }
-  return new Promise((resolve, reject) => {
-    if (live === true) {
-      const pid = childProcess.spawn(getPath(), args, {
-        env,
-        stdio: ['inherit', silent ? 'pipe' : 'inherit', 'inherit'],
-      });
-      pid.on('exit', () => {
-        resolve();
-      });
-    } else {
-      childProcess.execFile(getPath(), args, { env }, (err, stdout) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(stdout);
+exports.issue = issue;
+const CMD_STRING = '::';
+class Command {
+    constructor(command, properties, message) {
+        if (!command) {
+            command = 'missing.command';
         }
-      });
+        this.command = command;
+        this.properties = properties;
+        this.message = message;
     }
-  });
+    toString() {
+        let cmdStr = CMD_STRING + this.command;
+        if (this.properties && Object.keys(this.properties).length > 0) {
+            cmdStr += ' ';
+            let first = true;
+            for (const key in this.properties) {
+                if (this.properties.hasOwnProperty(key)) {
+                    const val = this.properties[key];
+                    if (val) {
+                        if (first) {
+                            first = false;
+                        }
+                        else {
+                            cmdStr += ',';
+                        }
+                        cmdStr += `${key}=${escapeProperty(val)}`;
+                    }
+                }
+            }
+        }
+        cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
+        return cmdStr;
+    }
 }
-
-module.exports = {
-  mockBinaryPath,
-  serializeOptions,
-  prepareCommand,
-  getPath,
-  execute,
-};
-
-
-/***/ }),
-
-/***/ 129:
-/***/ (function(module) {
-
-module.exports = require("child_process");
-
-/***/ }),
-
-/***/ 180:
-/***/ (function(module) {
-
-module.exports = {"_args":[["@sentry/cli@1.53.0","/Users/thomaslindner/git/sentry-releases-action"]],"_from":"@sentry/cli@1.53.0","_id":"@sentry/cli@1.53.0","_inBundle":false,"_integrity":"sha512-FgVR+AqPd1elj/HGTCg4FcQDVmIGwKGtaHDzHi2ipph9EOVYm6Ce0xYcHxYgKZuVyQMyg+zD5ZK3yHrB1AYlnw==","_location":"/@sentry/cli","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"@sentry/cli@1.53.0","name":"@sentry/cli","escapedName":"@sentry%2fcli","scope":"@sentry","rawSpec":"1.53.0","saveSpec":null,"fetchSpec":"1.53.0"},"_requiredBy":["/"],"_resolved":"https://registry.npmjs.org/@sentry/cli/-/cli-1.53.0.tgz","_spec":"1.53.0","_where":"/Users/thomaslindner/git/sentry-releases-action","bin":{"sentry-cli":"bin/sentry-cli"},"bugs":{"url":"https://github.com/getsentry/sentry-cli/issues"},"dependencies":{"https-proxy-agent":"^5.0.0","mkdirp":"^0.5.5","node-fetch":"^2.6.0","progress":"^2.0.3","proxy-from-env":"^1.1.0"},"description":"A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/","devDependencies":{"eslint":"^6.8.0","eslint-config-airbnb-base":"^14.1.0","eslint-config-prettier":"^6.10.1","eslint-plugin-import":"^2.20.2","jest":"^25.3.0","npm-run-all":"^4.1.5","prettier":"^1.19.1"},"engines":{"node":">= 8"},"homepage":"https://docs.sentry.io/hosted/learn/cli/","jest":{"collectCoverage":true,"testEnvironment":"node"},"keywords":["sentry","sentry-cli","cli"],"license":"BSD-3-Clause","main":"js/index.js","name":"@sentry/cli","repository":{"type":"git","url":"git+https://github.com/getsentry/sentry-cli.git"},"scripts":{"fix":"npm-run-all fix:eslint fix:prettier","fix:eslint":"eslint --fix bin/* scripts/**/*.js js/**/*.js","fix:prettier":"prettier --write bin/* scripts/**/*.js js/**/*.js","install":"node scripts/install.js","test":"npm-run-all test:jest test:eslint test:prettier","test:eslint":"eslint bin/* scripts/**/*.js js/**/*.js","test:jest":"jest","test:prettier":"prettier --check  bin/* scripts/**/*.js js/**/*.js","test:watch":"jest --watch --notify"},"version":"1.53.0"};
+function escapeData(s) {
+    return utils_1.toCommandValue(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A');
+}
+function escapeProperty(s) {
+    return utils_1.toCommandValue(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A')
+        .replace(/:/g, '%3A')
+        .replace(/,/g, '%2C');
+}
+//# sourceMappingURL=command.js.map
 
 /***/ }),
 
-/***/ 270:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const core = __webpack_require__(310);
-const SentryCli = __webpack_require__(340);
-const {runCommand} = __webpack_require__(737);
-
-const run = async () => {
-  try {
-    const cli = new SentryCli();
-
-    // Get the inputs from the workflow file: https://github.com/actions/toolkit/tree/master/packages/core#inputsoutputs
-    const tagName = core.getInput('tagName', {
-      required: true,
-    });
-    const environment = core.getInput('environment', {
-      required: true,
-    });
-    const releaseNamePrefix = core.getInput('releaseNamePrefix', {
-      required: false,
-    });
-
-    // This removes the 'refs/tags' portion of the string, i.e. from 'refs/tags/v1.0.0' to 'v1.0.0'
-    const tag = tagName.replace('refs/tags/', '');
-    let releaseName = tag;
-
-    if (releaseNamePrefix) {
-      releaseName = `${releaseNamePrefix}${tag}`;
-    }
-
-    core.info(`Tag is: ${tag}`);
-    core.info(`Sentry release is: ${releaseName}`);
-
-    // Create a release
-    await cli.releases.new(releaseName);
-
-    // Set commits
-    await cli.releases.setCommits(releaseName, {
-      repo: 'repo',
-      auto: true,
-    });
-
-    /* istanbul ignore next */
-    const sourceMapOptions = core.getInput('sourceMapOptions', {
-      required: false,
-    });
-
-    /* istanbul ignore next */
-    if (sourceMapOptions) {
-      await cli.releases.uploadSourceMaps(releaseName, JSON.parse(sourceMapOptions));
-    }
-
-    // Create a deployment (A node.js function isn't exposed for this operation.)
-    const sentryCliPath = SentryCli.getPath();
-
-    core.info(`sentryCliPath: ${sentryCliPath}`);
-    await runCommand(sentryCliPath, ['releases', 'deploys', releaseName, 'new', '-e', environment]);
-
-    // Finalize the release
-    await cli.releases.finalize(releaseName);
-  } catch (error) {
-    core.setFailed(error.message);
-  }
-};
-
-module.exports = run;
-
-
-/***/ }),
-
-/***/ 310:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ 564:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
 
@@ -326,8 +109,10 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const command_1 = __webpack_require__(997);
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const command_1 = __webpack_require__(352);
+const file_command_1 = __webpack_require__(598);
+const utils_1 = __webpack_require__(605);
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 /**
@@ -354,9 +139,17 @@ var ExitCode;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function exportVariable(name, val) {
-    const convertedVal = command_1.toCommandValue(val);
+    const convertedVal = utils_1.toCommandValue(val);
     process.env[name] = convertedVal;
-    command_1.issueCommand('set-env', { name }, convertedVal);
+    const filePath = process.env['GITHUB_ENV'] || '';
+    if (filePath) {
+        const delimiter = '_GitHubActionsFileCommandDelimeter_';
+        const commandValue = `${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}`;
+        file_command_1.issueCommand('ENV', commandValue);
+    }
+    else {
+        command_1.issueCommand('set-env', { name }, convertedVal);
+    }
 }
 exports.exportVariable = exportVariable;
 /**
@@ -372,7 +165,13 @@ exports.setSecret = setSecret;
  * @param inputPath
  */
 function addPath(inputPath) {
-    command_1.issueCommand('add-path', {}, inputPath);
+    const filePath = process.env['GITHUB_PATH'] || '';
+    if (filePath) {
+        file_command_1.issueCommand('PATH', inputPath);
+    }
+    else {
+        command_1.issueCommand('add-path', {}, inputPath);
+    }
     process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`;
 }
 exports.addPath = addPath;
@@ -534,15 +333,275 @@ exports.getState = getState;
 
 /***/ }),
 
-/***/ 340:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ 598:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+// For internal use, subject to change.
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const fs = __importStar(__webpack_require__(747));
+const os = __importStar(__webpack_require__(87));
+const utils_1 = __webpack_require__(605);
+function issueCommand(command, message) {
+    const filePath = process.env[`GITHUB_${command}`];
+    if (!filePath) {
+        throw new Error(`Unable to find environment variable for file command ${command}`);
+    }
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`Missing file at path: ${filePath}`);
+    }
+    fs.appendFileSync(filePath, `${utils_1.toCommandValue(message)}${os.EOL}`, {
+        encoding: 'utf8'
+    });
+}
+exports.issueCommand = issueCommand;
+//# sourceMappingURL=file-command.js.map
+
+/***/ }),
+
+/***/ 605:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+/**
+ * Sanitizes an input into a string so it can be passed into issueCommand safely
+ * @param input input to sanitize into a string
+ */
+function toCommandValue(input) {
+    if (input === null || input === undefined) {
+        return '';
+    }
+    else if (typeof input === 'string' || input instanceof String) {
+        return input;
+    }
+    return JSON.stringify(input);
+}
+exports.toCommandValue = toCommandValue;
+//# sourceMappingURL=utils.js.map
+
+/***/ }),
+
+/***/ 5:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
 
-const pkgInfo = __webpack_require__(180);
-const helper = __webpack_require__(116);
-const Releases = __webpack_require__(466);
+const os = __webpack_require__(87);
+const path = __webpack_require__(622);
+const childProcess = __webpack_require__(129);
+
+/**
+ * Absolute path to the sentry-cli binary (platform dependent).
+ * @type {string}
+ */
+// istanbul ignore next
+let binaryPath = __webpack_require__.ab + "sentry-cli";
+/**
+ * Overrides the default binary path with a mock value, useful for testing.
+ *
+ * @param {string} mockPath The new path to the mock sentry-cli binary
+ */
+function mockBinaryPath(mockPath) {
+  binaryPath = mockPath;
+}
+
+/**
+ * The javascript type of a command line option.
+ * @typedef {'array'|'string'|'boolean'|'inverted-boolean'} OptionType
+ */
+
+/**
+ * Schema definition of a command line option.
+ * @typedef {object} OptionSchema
+ * @prop {string} param The flag of the command line option including dashes.
+ * @prop {OptionType} type The value type of the command line option.
+ */
+
+/**
+ * Schema definition for a command.
+ * @typedef {Object.<string, OptionSchema>} OptionsSchema
+ */
+
+/**
+ * Serializes command line options into an arguments array.
+ *
+ * @param {OptionsSchema} schema An options schema required by the command.
+ * @param {object} options An options object according to the schema.
+ * @returns {string[]} An arguments array that can be passed via command line.
+ */
+function serializeOptions(schema, options) {
+  return Object.keys(schema).reduce((newOptions, option) => {
+    const paramValue = options[option];
+    if (paramValue === undefined) {
+      return newOptions;
+    }
+
+    const paramType = schema[option].type;
+    const paramName = schema[option].param;
+
+    if (paramType === 'array') {
+      if (!Array.isArray(paramValue)) {
+        throw new Error(`${option} should be an array`);
+      }
+
+      return newOptions.concat(
+        paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
+      );
+    }
+
+    if (paramType === 'boolean') {
+      if (typeof paramValue !== 'boolean') {
+        throw new Error(`${option} should be a bool`);
+      }
+
+      const invertedParamName = schema[option].invertedParam;
+
+      if (paramValue && paramName !== undefined) {
+        return newOptions.concat([paramName]);
+      }
+
+      if (!paramValue && invertedParamName !== undefined) {
+        return newOptions.concat([invertedParamName]);
+      }
+
+      return newOptions;
+    }
+
+    return newOptions.concat(paramName, paramValue);
+  }, []);
+}
+
+/**
+ * Serializes the command and its options into an arguments array.
+ *
+ * @param {string} command The literal name of the command.
+ * @param {OptionsSchema} [schema] An options schema required by the command.
+ * @param {object} [options] An options object according to the schema.
+ * @returns {string[]} An arguments array that can be passed via command line.
+ */
+function prepareCommand(command, schema, options) {
+  return command.concat(serializeOptions(schema || {}, options || {}));
+}
+
+/**
+ * Returns the absolute path to the `sentry-cli` binary.
+ * @returns {string}
+ */
+function getPath() {
+  return __webpack_require__.ab + "sentry-cli";
+}
+
+/**
+ * Runs `sentry-cli` with the given command line arguments.
+ *
+ * Use {@link prepareCommand} to specify the command and add arguments for command-
+ * specific options. For top-level options, use {@link serializeOptions} directly.
+ *
+ * The returned promise resolves with the standard output of the command invocation
+ * including all newlines. In order to parse this output, be sure to trim the output
+ * first.
+ *
+ * If the command failed to execute, the Promise rejects with the error returned by the
+ * CLI. This error includes a `code` property with the process exit status.
+ *
+ * @example
+ * const output = await execute(['--version']);
+ * expect(output.trim()).toBe('sentry-cli x.y.z');
+ *
+ * @param {string[]} args Command line arguments passed to `sentry-cli`.
+ * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
+ * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
+ * @param {string} [configFile] Relative or absolute path to the configuration file.
+ * @param {Object} [config] More configuration to pass to the CLI
+ * @returns {Promise.<string>} A promise that resolves to the standard output.
+ */
+function execute(args, live, silent, configFile, config = {}) {
+  const env = { ...process.env };
+  if (configFile) {
+    env.SENTRY_PROPERTIES = configFile;
+  }
+  if (config.url) {
+    env.SENTRY_URL = config.url;
+  }
+  if (config.authToken) {
+    env.SENTRY_AUTH_TOKEN = config.authToken;
+  }
+  if (config.apiKey) {
+    env.SENTRY_API_KEY = config.apiKey;
+  }
+  if (config.dsn) {
+    env.SENTRY_DSN = config.dsn;
+  }
+  if (config.org) {
+    env.SENTRY_ORG = config.org;
+  }
+  if (config.project) {
+    env.SENTRY_PROJECT = config.project;
+  }
+  if (config.vcsRemote) {
+    env.SENTRY_VCS_REMOTE = config.vcsRemote;
+  }
+  return new Promise((resolve, reject) => {
+    if (live === true) {
+      const pid = childProcess.spawn(getPath(), args, {
+        env,
+        stdio: ['inherit', silent ? 'pipe' : 'inherit', 'inherit'],
+      });
+      pid.on('exit', () => {
+        resolve();
+      });
+    } else {
+      childProcess.execFile(getPath(), args, { env }, (err, stdout) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(stdout);
+        }
+      });
+    }
+  });
+}
+
+function getProjectFlagsFromOptions({ projects = [] } = {}) {
+  return projects.reduce((flags, project) => flags.concat('-p', project), []);
+}
+
+module.exports = {
+  mockBinaryPath,
+  serializeOptions,
+  prepareCommand,
+  getPath,
+  execute,
+  getProjectFlagsFromOptions,
+};
+
+
+/***/ }),
+
+/***/ 365:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const pkgInfo = __webpack_require__(328);
+const helper = __webpack_require__(5);
+const Releases = __webpack_require__(548);
 
 /**
  * Interface to and wrapper around the `sentry-cli` executable.
@@ -600,7 +659,7 @@ class SentryCli {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
-    return helper.execute(args, live, this.options.silent, this.configFile);
+    return helper.execute(args, live, this.options.silent, this.configFile, this.options);
   }
 }
 
@@ -609,67 +668,13 @@ module.exports = SentryCli;
 
 /***/ }),
 
-/***/ 355:
-/***/ (function(module) {
-
-module.exports = {
-  ignore: {
-    param: '--ignore',
-    type: 'array',
-  },
-  ignoreFile: {
-    param: '--ignore-file',
-    type: 'string',
-  },
-  dist: {
-    param: '--dist',
-    type: 'string',
-  },
-  rewrite: {
-    param: '--rewrite',
-    invertedParam: '--no-rewrite',
-    type: 'boolean',
-  },
-  sourceMapReference: {
-    invertedParam: '--no-sourcemap-reference',
-    type: 'boolean',
-  },
-  stripPrefix: {
-    param: '--strip-prefix',
-    type: 'array',
-  },
-  stripCommonPrefix: {
-    param: '--strip-common-prefix',
-    type: 'boolean',
-  },
-  validate: {
-    param: '--validate',
-    type: 'boolean',
-  },
-  urlPrefix: {
-    param: '--url-prefix',
-    type: 'string',
-  },
-  urlSuffix: {
-    param: '--url-suffix',
-    type: 'string',
-  },
-  ext: {
-    param: '--ext',
-    type: 'array',
-  },
-};
-
-
-/***/ }),
-
-/***/ 466:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ 548:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
 
 
-const helper = __webpack_require__(116);
+const helper = __webpack_require__(5);
 
 /**
  * Default arguments for the `--ignore` option.
@@ -681,13 +686,13 @@ const DEFAULT_IGNORE = ['node_modules'];
  * Schema for the `upload-sourcemaps` command.
  * @type {OptionsSchema}
  */
-const SOURCEMAPS_SCHEMA = __webpack_require__(355);
+const SOURCEMAPS_SCHEMA = __webpack_require__(33);
 
 /**
  * Schema for the `deploys new` command.
  * @type {OptionsSchema}
  */
-const DEPLOYS_SCHEMA = __webpack_require__(909);
+const DEPLOYS_SCHEMA = __webpack_require__(270);
 
 /**
  * Manages releases and release artifacts on Sentry.
@@ -714,11 +719,14 @@ class Releases {
    * upload artifacts, such as source maps.
    *
    * @param {string} release Unique name of the new release.
+   * @param {object} options A set of options when creating a release.
+   * @param {array} options.projects The list of project slugs for a release.
    * @returns {Promise} A promise that resolves when the release has been created.
    * @memberof SentryReleases
    */
-  new(release) {
-    return this.execute(['releases', 'new', release], null);
+  new(release, options) {
+    const args = ['releases', 'new', release].concat(helper.getProjectFlagsFromOptions(options));
+    return this.execute(args, null);
   }
 
   /**
@@ -804,6 +812,7 @@ class Releases {
    *   urlPrefix: '',             // add a prefix source map urls after stripping them
    *   urlSuffix: '',             // add a suffix source map urls after stripping them
    *   ext: ['js', 'map', 'jsbundle', 'bundle'],  // override file extensions to scan for
+   *   projects: ['node']        // provide a list of projects
    * });
    *
    * @param {string} release Unique name of the release.
@@ -822,7 +831,9 @@ class Releases {
         newOptions.ignore = DEFAULT_IGNORE;
       }
 
-      const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
+      const args = ['releases']
+        .concat(helper.getProjectFlagsFromOptions(options))
+        .concat(['files', release, 'upload-sourcemaps', sourcemapPath]);
       return this.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions), true);
     });
 
@@ -863,7 +874,7 @@ class Releases {
    * @memberof SentryReleases
    */
   newDeploy(release, options) {
-    if (!options || !options.include) {
+    if (!options || !options.env) {
       throw new Error('options.env must be a vaild name');
     }
     const args = ['releases', 'deploys', release, 'new'];
@@ -877,7 +888,7 @@ class Releases {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
-    return helper.execute(args, live, this.options.silent, this.configFile);
+    return helper.execute(args, live, this.options.silent, this.configFile, this.options);
   }
 }
 
@@ -886,52 +897,8 @@ module.exports = Releases;
 
 /***/ }),
 
-/***/ 622:
-/***/ (function(module) {
-
-module.exports = require("path");
-
-/***/ }),
-
-/***/ 703:
-/***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
-
-const run = __webpack_require__(270);
-
-if (require.main === require.cache[eval('__filename')]) {
-  run();
-}
-
-
-/***/ }),
-
-/***/ 737:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-const {execFile} = __webpack_require__(129);
-
-// eslint-disable-next-line require-await
-const runCommand = async (filePath, args) => {
-  return new Promise((resolve, reject) => {
-    execFile(filePath, args, (error, stdout) => {
-      if (error) {
-        reject(error);
-      }
-
-      resolve(stdout);
-    });
-  });
-};
-
-module.exports = {
-  runCommand,
-};
-
-
-/***/ }),
-
-/***/ 909:
-/***/ (function(module) {
+/***/ 270:
+/***/ ((module) => {
 
 module.exports = {
   env: {
@@ -963,103 +930,259 @@ module.exports = {
 
 /***/ }),
 
-/***/ 997:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ 33:
+/***/ ((module) => {
+
+module.exports = {
+  ignore: {
+    param: '--ignore',
+    type: 'array',
+  },
+  ignoreFile: {
+    param: '--ignore-file',
+    type: 'string',
+  },
+  dist: {
+    param: '--dist',
+    type: 'string',
+  },
+  rewrite: {
+    param: '--rewrite',
+    invertedParam: '--no-rewrite',
+    type: 'boolean',
+  },
+  sourceMapReference: {
+    invertedParam: '--no-sourcemap-reference',
+    type: 'boolean',
+  },
+  stripPrefix: {
+    param: '--strip-prefix',
+    type: 'array',
+  },
+  stripCommonPrefix: {
+    param: '--strip-common-prefix',
+    type: 'boolean',
+  },
+  validate: {
+    param: '--validate',
+    type: 'boolean',
+  },
+  urlPrefix: {
+    param: '--url-prefix',
+    type: 'string',
+  },
+  urlSuffix: {
+    param: '--url-suffix',
+    type: 'string',
+  },
+  ext: {
+    param: '--ext',
+    type: 'array',
+  },
+};
+
+
+/***/ }),
+
+/***/ 699:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const core = __webpack_require__(564);
+const SentryCli = __webpack_require__(365);
+const { runCommand } = __webpack_require__(719);
+
+const run = async () => {
+  try {
+    const cli = new SentryCli();
+
+    // Get the inputs from the workflow file: https://github.com/actions/toolkit/tree/master/packages/core#inputsoutputs
+    const tagName = core.getInput("tagName", {
+      required: true,
+    });
+    const environment = core.getInput("environment", {
+      required: true,
+    });
+    const releaseNamePrefix = core.getInput("releaseNamePrefix", {
+      required: false,
+    });
+
+    // This removes the 'refs/tags' portion of the string, i.e. from 'refs/tags/v1.0.0' to 'v1.0.0'
+    const tag = tagName.replace("refs/tags/", "");
+    let releaseName = tag;
+
+    if (releaseNamePrefix) {
+      releaseName = `${releaseNamePrefix}${tag}`;
+    }
+
+    core.info(`Tag is: ${tag}`);
+    core.info(`Sentry release is: ${releaseName}`);
+
+    // Create a release
+    await cli.releases.new(releaseName);
+
+    // Set commits
+
+    const commit = core.getInput("commit", {
+      required: false,
+    });
+    const commitsOptions = commit
+      ? { repo: "repo", commit: commit }
+      : { repo: "repo", auto: true };
+    await cli.releases.setCommits(releaseName, commitsOptions);
+
+    /* istanbul ignore next */
+    const sourceMapOptions = core.getInput("sourceMapOptions", {
+      required: false,
+    });
+
+    /* istanbul ignore next */
+    if (sourceMapOptions) {
+      await cli.releases.uploadSourceMaps(
+        releaseName,
+        JSON.parse(sourceMapOptions)
+      );
+    }
+
+    // Create a deployment (A node.js function isn't exposed for this operation.)
+    const sentryCliPath = SentryCli.getPath();
+
+    core.info(`sentryCliPath: ${sentryCliPath}`);
+    await runCommand(sentryCliPath, [
+      "releases",
+      "deploys",
+      releaseName,
+      "new",
+      "-e",
+      environment,
+    ]);
+
+    // Finalize the release
+    await cli.releases.finalize(releaseName);
+  } catch (error) {
+    core.setFailed(error.message);
+  }
+};
+
+module.exports = run;
+
+
+/***/ }),
+
+/***/ 860:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+const run = __webpack_require__(699);
+
+if (require.main === require.cache[eval('__filename')]) {
+  run();
+}
+
+
+/***/ }),
+
+/***/ 719:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+const {execFile} = __webpack_require__(129);
+
+// eslint-disable-next-line require-await
+const runCommand = async (filePath, args) => {
+  return new Promise((resolve, reject) => {
+    execFile(filePath, args, (error, stdout) => {
+      if (error) {
+        reject(error);
+      }
+
+      resolve(stdout);
+    });
+  });
+};
+
+module.exports = {
+  runCommand,
+};
+
+
+/***/ }),
+
+/***/ 328:
+/***/ ((module) => {
 
 "use strict";
+module.exports = JSON.parse("{\"_args\":[[\"@sentry/cli@1.59.0\",\"/Users/edvinasbartkus/projects/sentry-releases-action\"]],\"_from\":\"@sentry/cli@1.59.0\",\"_id\":\"@sentry/cli@1.59.0\",\"_inBundle\":false,\"_integrity\":\"sha512-9nK4uVHW7HIbOwFZNvHRWFJcD+bqjW3kMWK2UUMqQWse0Lf3xM+2o+REGGkk0S69+E4elSiukVjUPTI5aijNlA==\",\"_location\":\"/@sentry/cli\",\"_phantomChildren\":{},\"_requested\":{\"type\":\"version\",\"registry\":true,\"raw\":\"@sentry/cli@1.59.0\",\"name\":\"@sentry/cli\",\"escapedName\":\"@sentry%2fcli\",\"scope\":\"@sentry\",\"rawSpec\":\"1.59.0\",\"saveSpec\":null,\"fetchSpec\":\"1.59.0\"},\"_requiredBy\":[\"/\"],\"_resolved\":\"https://registry.npmjs.org/@sentry/cli/-/cli-1.59.0.tgz\",\"_spec\":\"1.59.0\",\"_where\":\"/Users/edvinasbartkus/projects/sentry-releases-action\",\"bin\":{\"sentry-cli\":\"bin/sentry-cli\"},\"bugs\":{\"url\":\"https://github.com/getsentry/sentry-cli/issues\"},\"dependencies\":{\"https-proxy-agent\":\"^5.0.0\",\"mkdirp\":\"^0.5.5\",\"node-fetch\":\"^2.6.0\",\"progress\":\"^2.0.3\",\"proxy-from-env\":\"^1.1.0\"},\"description\":\"A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/\",\"devDependencies\":{\"eslint\":\"^6.8.0\",\"eslint-config-airbnb-base\":\"^14.1.0\",\"eslint-config-prettier\":\"^6.10.1\",\"eslint-plugin-import\":\"^2.20.2\",\"jest\":\"^25.3.0\",\"npm-run-all\":\"^4.1.5\",\"prettier\":\"^1.19.1\"},\"engines\":{\"node\":\">= 8\"},\"homepage\":\"https://docs.sentry.io/hosted/learn/cli/\",\"jest\":{\"collectCoverage\":true,\"testEnvironment\":\"node\",\"testPathIgnorePatterns\":[\"src/utils\"]},\"keywords\":[\"sentry\",\"sentry-cli\",\"cli\"],\"license\":\"BSD-3-Clause\",\"main\":\"js/index.js\",\"name\":\"@sentry/cli\",\"repository\":{\"type\":\"git\",\"url\":\"git+https://github.com/getsentry/sentry-cli.git\"},\"scripts\":{\"fix\":\"npm-run-all fix:eslint fix:prettier\",\"fix:eslint\":\"eslint --fix bin/* scripts/**/*.js js/**/*.js\",\"fix:prettier\":\"prettier --write bin/* scripts/**/*.js js/**/*.js\",\"install\":\"node scripts/install.js\",\"test\":\"npm-run-all test:jest test:eslint test:prettier\",\"test:eslint\":\"eslint bin/* scripts/**/*.js js/**/*.js\",\"test:jest\":\"jest\",\"test:prettier\":\"prettier --check  bin/* scripts/**/*.js js/**/*.js\",\"test:watch\":\"jest --watch --notify\"},\"version\":\"1.59.0\"}");
 
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const os = __importStar(__webpack_require__(87));
-/**
- * Commands
- *
- * Command Format:
- *   ::name key=value,key=value::message
- *
- * Examples:
- *   ::warning::This is the message
- *   ::set-env name=MY_VAR::some value
- */
-function issueCommand(command, properties, message) {
-    const cmd = new Command(command, properties, message);
-    process.stdout.write(cmd.toString() + os.EOL);
-}
-exports.issueCommand = issueCommand;
-function issue(name, message = '') {
-    issueCommand(name, {}, message);
-}
-exports.issue = issue;
-const CMD_STRING = '::';
-class Command {
-    constructor(command, properties, message) {
-        if (!command) {
-            command = 'missing.command';
-        }
-        this.command = command;
-        this.properties = properties;
-        this.message = message;
-    }
-    toString() {
-        let cmdStr = CMD_STRING + this.command;
-        if (this.properties && Object.keys(this.properties).length > 0) {
-            cmdStr += ' ';
-            let first = true;
-            for (const key in this.properties) {
-                if (this.properties.hasOwnProperty(key)) {
-                    const val = this.properties[key];
-                    if (val) {
-                        if (first) {
-                            first = false;
-                        }
-                        else {
-                            cmdStr += ',';
-                        }
-                        cmdStr += `${key}=${escapeProperty(val)}`;
-                    }
-                }
-            }
-        }
-        cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
-        return cmdStr;
-    }
-}
-/**
- * Sanitizes an input into a string so it can be passed into issueCommand safely
- * @param input input to sanitize into a string
- */
-function toCommandValue(input) {
-    if (input === null || input === undefined) {
-        return '';
-    }
-    else if (typeof input === 'string' || input instanceof String) {
-        return input;
-    }
-    return JSON.stringify(input);
-}
-exports.toCommandValue = toCommandValue;
-function escapeData(s) {
-    return toCommandValue(s)
-        .replace(/%/g, '%25')
-        .replace(/\r/g, '%0D')
-        .replace(/\n/g, '%0A');
-}
-function escapeProperty(s) {
-    return toCommandValue(s)
-        .replace(/%/g, '%25')
-        .replace(/\r/g, '%0D')
-        .replace(/\n/g, '%0A')
-        .replace(/:/g, '%3A')
-        .replace(/,/g, '%2C');
-}
-//# sourceMappingURL=command.js.map
+/***/ }),
+
+/***/ 129:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");;
+
+/***/ }),
+
+/***/ 747:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("fs");;
+
+/***/ }),
+
+/***/ 87:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("os");;
+
+/***/ }),
+
+/***/ 622:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("path");;
 
 /***/ })
 
-/******/ });
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		if(__webpack_module_cache__[moduleId]) {
+/******/ 			return __webpack_module_cache__[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		var threw = true;
+/******/ 		try {
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 			threw = false;
+/******/ 		} finally {
+/******/ 			if(threw) delete __webpack_module_cache__[moduleId];
+/******/ 		}
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/compat */
+/******/ 	
+/******/ 	__webpack_require__.ab = __dirname + "/";/************************************************************************/
+/******/ 	// module exports must be returned from runtime so entry inlining is disabled
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(860);
+/******/ })()
+;
