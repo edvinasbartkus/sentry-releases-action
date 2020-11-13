@@ -989,25 +989,25 @@ module.exports = {
 
 const core = __webpack_require__(564);
 const SentryCli = __webpack_require__(365);
-const { runCommand } = __webpack_require__(719);
+const {runCommand} = __webpack_require__(719);
 
 const run = async () => {
   try {
     const cli = new SentryCli();
 
     // Get the inputs from the workflow file: https://github.com/actions/toolkit/tree/master/packages/core#inputsoutputs
-    const tagName = core.getInput("tagName", {
+    const tagName = core.getInput('tagName', {
       required: true,
     });
-    const environment = core.getInput("environment", {
+    const environment = core.getInput('environment', {
       required: true,
     });
-    const releaseNamePrefix = core.getInput("releaseNamePrefix", {
+    const releaseNamePrefix = core.getInput('releaseNamePrefix', {
       required: false,
     });
 
     // This removes the 'refs/tags' portion of the string, i.e. from 'refs/tags/v1.0.0' to 'v1.0.0'
-    const tag = tagName.replace("refs/tags/", "");
+    const tag = tagName.replace('refs/tags/', '');
     let releaseName = tag;
 
     if (releaseNamePrefix) {
@@ -1022,39 +1022,28 @@ const run = async () => {
 
     // Set commits
 
-    const commit = core.getInput("commit", {
+    const commit = core.getInput('commit', {
       required: false,
     });
-    const commitsOptions = commit
-      ? { repo: "repo", commit: commit }
-      : { repo: "repo", auto: true };
+    const commitsOptions = commit ? {repo: 'repo', commit} : {repo: 'repo', auto: true};
+
     await cli.releases.setCommits(releaseName, commitsOptions);
 
     /* istanbul ignore next */
-    const sourceMapOptions = core.getInput("sourceMapOptions", {
+    const sourceMapOptions = core.getInput('sourceMapOptions', {
       required: false,
     });
 
     /* istanbul ignore next */
     if (sourceMapOptions) {
-      await cli.releases.uploadSourceMaps(
-        releaseName,
-        JSON.parse(sourceMapOptions)
-      );
+      await cli.releases.uploadSourceMaps(releaseName, JSON.parse(sourceMapOptions));
     }
 
     // Create a deployment (A node.js function isn't exposed for this operation.)
     const sentryCliPath = SentryCli.getPath();
 
     core.info(`sentryCliPath: ${sentryCliPath}`);
-    await runCommand(sentryCliPath, [
-      "releases",
-      "deploys",
-      releaseName,
-      "new",
-      "-e",
-      environment,
-    ]);
+    await runCommand(sentryCliPath, ['releases', 'deploys', releaseName, 'new', '-e', environment]);
 
     // Finalize the release
     await cli.releases.finalize(releaseName);

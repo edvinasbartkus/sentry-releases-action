@@ -33,12 +33,11 @@ const run = async () => {
 
     // Set commits
 
-    const commit = core.getInput("commit", {
+    const commit = core.getInput('commit', {
       required: false,
     });
-    const commitsOptions = commit
-      ? { repo: "repo", commit: commit }
-      : { repo: "repo", auto: true };
+    const commitsOptions = commit ? {repo: 'repo', commit} : {repo: 'repo', auto: true};
+
     await cli.releases.setCommits(releaseName, commitsOptions);
 
     /* istanbul ignore next */
